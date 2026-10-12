@@ -20,6 +20,11 @@ runs:
         curl -fsSL "https://get.please.build/linux_amd64/${PLEASE_VERSION}/please_${PLEASE_VERSION}.tar.gz" \
           | tar -xzf - --strip-components=1 -C "$dir"
         ln -sf "$dir/please" "$HOME/.please/bin/plz"
+        # Sandboxed tests (`sandbox = True`) exec please_sandbox, which Please
+        # looks up on its PATH rather than next to its own binary - without it
+        # they fail with "exec: no command".
+        ln -sf "$dir/please_sandbox" "$HOME/.please/bin/please_sandbox"
+        sudo ln -sf "$dir/please_sandbox" /usr/local/bin/please_sandbox
         echo "$HOME/.please/bin" >>"$GITHUB_PATH"
         "$HOME/.please/bin/plz" --version
 
