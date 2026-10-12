@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        plugin: [nushell, plantuml, opa, hugo, k8s, terraform]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-please
+
+      # Each plugin's examples/ is its own Please repository, consuming the
+      # plugin from this checkout the same way a user would - see its README.
+      - name: plz build //... (${{ matrix.plugin }} examples)
+        working-directory: ${{ matrix.plugin }}/examples
+        run: plz build //...
+
+      - name: plz test //... (${{ matrix.plugin }} examples)
+        working-directory: ${{ matrix.plugin }}/examples
+        run: plz test //...

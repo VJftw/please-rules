@@ -1,0 +1,27 @@
+[Please]
+Version = >=17.0.0
+
+; Define the Plugin configuration options.
+[PluginDefinition]
+Name = terraform
+Description = "A Please plugin for hermetic, per-target Terraform: validated modules, runnable roots, an offline provider mirror and pre-fetched registry modules."
+BuildDefsDir = "build_defs"
+
+[PluginConfig "default_script"]
+ConfigKey = DefaultScript
+Optional = true
+Inherit = true
+Help = "An executable target that every terraform_root's `plz run` (and terraform_root_test) hands off to, instead of the plugin's built-in one (auto-init, then terraform). See the README's Custom workflows section."
+
+[PluginConfig "nushell"]
+ConfigKey = Nushell
+DefaultValue = "//third_party/nushell:nu|nu"
+Inherit = true
+Help = "The nu executable the plugin's build actions and runners use. Defaults to a Nushell build it downloads itself."
+
+[PluginConfig "default_providers"]
+ConfigKey = DefaultProviders
+Optional = true
+Repeatable = true
+Inherit = true
+Help = "Provider plugins (terraform_provider/terraform_local_provider rules) in the offline mirror of every terraform_module and terraform_root, as well as each one's own `providers`."

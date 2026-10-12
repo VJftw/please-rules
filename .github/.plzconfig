@@ -1,0 +1,11 @@
+; Tooling for this repository itself (not a released plugin - it lives under
+; .github/, so registry.nu's plugin discovery ignores it): runs
+; scripts/registry.nu and the checksum mirror scripts with the repo's own
+; nushell plugin, loaded from this checkout.
+;
+;   cd .github && plz run //scripts:registry -- <subcommand> ...
+[Please]
+Version = >=17.0.0
+
+[Plugin "nushell"]
+Target = //third_party/plugins:nushell

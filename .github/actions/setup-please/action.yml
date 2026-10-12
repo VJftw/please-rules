@@ -1,0 +1,24 @@
+name: Set up Please
+description: Installs a pinned version of Please (https://please.build) as `plz`.
+
+inputs:
+  version:
+    description: The Please version to install.
+    default: "17.33.0"
+
+runs:
+  using: composite
+  steps:
+    - name: Install Please ${{ inputs.version }}
+      shell: bash
+      env:
+        PLEASE_VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        dir="$HOME/.please/$PLEASE_VERSION"
+        mkdir -p "$dir" "$HOME/.please/bin"
+        curl -fsSL "https://get.please.build/linux_amd64/${PLEASE_VERSION}/please_${PLEASE_VERSION}.tar.gz" \
+          | tar -xzf - --strip-components=1 -C "$dir"
+        ln -sf "$dir/please" "$HOME/.please/bin/plz"
+        echo "$HOME/.please/bin" >>"$GITHUB_PATH"
+        "$HOME/.please/bin/plz" --version
