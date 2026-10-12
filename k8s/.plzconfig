@@ -1,0 +1,44 @@
+[Please]
+Version = >=17.0.0
+
+; Define the Plugin configuration options.
+[PluginDefinition]
+Name = k8s
+Description = "A Please plugin for rendering and composing Kubernetes manifests with kustomize and Helm, and running kubectl."
+BuildDefsDir = "build_defs"
+
+[PluginConfig "kustomize"]
+ConfigKey = Kustomize
+DefaultValue = "//third_party/k8s:kustomize"
+Inherit = true
+Help = "The kustomize executable, as a Please target or a command on the host's PATH. Leaving this as the default and setting KustomizeVersion downloads that version from GitHub Releases."
+
+[PluginConfig "kustomize_version"]
+ConfigKey = KustomizeVersion
+DefaultValue = "5.8.1"
+Inherit = true
+Help = "The kustomize version to download when Kustomize is left as its default."
+
+[PluginConfig "helm"]
+ConfigKey = Helm
+DefaultValue = "//third_party/k8s:helm"
+Inherit = true
+Help = "The helm executable, as a Please target or a command on the host's PATH. Leaving this as the default and setting HelmVersion downloads that version from get.helm.sh."
+
+[PluginConfig "helm_version"]
+ConfigKey = HelmVersion
+DefaultValue = "3.22.0"
+Inherit = true
+Help = "The helm version to download when Helm is left as its default."
+
+[PluginConfig "kubectl"]
+ConfigKey = Kubectl
+DefaultValue = "//third_party/k8s:kubectl"
+Inherit = true
+Help = "The kubectl executable, as a Please target or a command on the host's PATH. Leaving this as the default and setting KubectlVersion downloads that version from dl.k8s.io."
+
+[PluginConfig "kubectl_version"]
+ConfigKey = KubectlVersion
+DefaultValue = "1.37.1"
+Inherit = true
+Help = "The kubectl version to download when Kubectl is left as its default."

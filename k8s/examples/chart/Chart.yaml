@@ -1,0 +1,5 @@
+apiVersion: v2
+name: hello
+description: A minimal example chart for the k8s Please plugin
+version: 0.1.0
+appVersion: "1.0.0"

@@ -1,0 +1,20 @@
+[Please]
+Version = >=17.0.0
+
+; Define the Plugin configuration options.
+[PluginDefinition]
+Name = nushell
+Description = "A Please plugin for running Nushell scripts as binaries and tests."
+BuildDefsDir = "build_defs"
+
+[PluginConfig "tool"]
+ConfigKey = Tool
+DefaultValue = "//third_party/nushell:nu|nu"
+Inherit = true
+Help = "The nu executable, as a Please target (optionally with an |entry_point) or a command on the host's PATH. Leaving this as the default and setting ToolVersion downloads that version of Nushell from GitHub Releases."
+
+[PluginConfig "tool_version"]
+ConfigKey = ToolVersion
+DefaultValue = "0.116.0"
+Inherit = true
+Help = "The Nushell version to download when Tool is left as its default. See https://github.com/nushell/nushell/releases for available versions."

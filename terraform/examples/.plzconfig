@@ -1,0 +1,16 @@
+; An example Please repository consuming the terraform plugin the same way an
+; end user would, except that the plugin is loaded from this local checkout
+; (see //third_party/plugins:terraform) rather than downloaded.
+;
+; Exercises the plugin end-to-end: per-target Terraform versions, the offline
+; provider mirror (HashiCorp-published and third-party), hermetic third-party
+; registry modules - including nested through a local `deps` chain - and an
+; OpenTofu (non-HashiCorp) CLI build.
+[Please]
+Version = >=17.0.0
+
+[Plugin "terraform"]
+Target = //third_party/plugins:terraform
+; In every module's offline provider mirror - see //third_party/terraform.
+DefaultProviders = //third_party/terraform:random
+DefaultProviders = //third_party/terraform:cloudflare

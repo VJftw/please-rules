@@ -1,0 +1,35 @@
+[Please]
+Version = >=17.0.0
+
+; Define the Plugin configuration options.
+[PluginDefinition]
+Name = plantuml
+Description = "A Please plugin for rendering PlantUML diagrams."
+BuildDefsDir = "build_defs"
+
+[PluginConfig "java"]
+ConfigKey = Java
+DefaultValue = "//third_party/java:toolchain|java"
+Inherit = true
+Help = "The java executable that runs PlantUML, as a Please target (optionally with an |entry_point) or a path/command on the host. Defaults to a JDK downloaded with the java plugin's java_toolchain."
+
+[PluginConfig "jar"]
+ConfigKey = Jar
+DefaultValue = "//third_party/java:plantuml"
+Inherit = true
+Help = "The PlantUML jar, as a Please target or a path on the host. Leaving this as the default and setting ToolVersion downloads that version of PlantUML from Maven Central."
+
+[PluginConfig "tool_version"]
+ConfigKey = ToolVersion
+DefaultValue = "1.2026.8"
+Inherit = true
+Help = "The PlantUML version to download when Jar is left as its default. See https://repo1.maven.org/maven2/net/sourceforge/plantuml/plantuml/ for available versions."
+
+[PluginConfig "default_format"]
+ConfigKey = DefaultFormat
+DefaultValue = "svg"
+Help = "The default output format for plantuml_diagram. One of svg, png, eps, pdf, txt, utxt."
+
+; The java plugin provides the rules that download PlantUML and a JDK.
+[Plugin "java"]
+Target = //:java

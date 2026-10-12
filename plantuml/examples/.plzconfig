@@ -1,0 +1,8 @@
+; An example Please repository consuming the plantuml plugin the same way an
+; end user would, except that the plugin is loaded from this local checkout
+; (see //third_party/plugins:plantuml) rather than downloaded.
+[Please]
+Version = >=17.0.0
+
+[Plugin "plantuml"]
+Target = //third_party/plugins:plantuml

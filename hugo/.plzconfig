@@ -1,0 +1,26 @@
+[Please]
+Version = >=17.0.0
+
+; Define the Plugin configuration options.
+[PluginDefinition]
+Name = hugo
+Description = "A Please plugin for building Hugo static sites."
+BuildDefsDir = "build_defs"
+
+[PluginConfig "tool"]
+ConfigKey = Tool
+DefaultValue = "//third_party/hugo:hugo"
+Inherit = true
+Help = "The hugo executable, as a Please target or a command on the host's PATH. Leaving this as the default and setting ToolVersion/ToolVariant downloads that version of Hugo from GitHub Releases."
+
+[PluginConfig "tool_version"]
+ConfigKey = ToolVersion
+DefaultValue = "0.166.0"
+Inherit = true
+Help = "The Hugo version to download when Tool is left as its default. See https://github.com/gohugoio/hugo/releases for available versions."
+
+[PluginConfig "tool_variant"]
+ConfigKey = ToolVariant
+DefaultValue = "extended"
+Inherit = true
+Help = "Which Hugo release build to download when Tool is left as its default: extended (the default - adds the Sass/SCSS support most themes expect), hugo (the plain build), extended_withdeploy or withdeploy (which also bundle `hugo deploy`). Only extended is covered by the checksum mirror."

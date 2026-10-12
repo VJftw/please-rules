@@ -1,0 +1,8 @@
+@startuml
+!pragma layout elk
+class Foo
+class Bar
+class Baz
+Foo --> Bar
+Foo --> Baz
+@enduml

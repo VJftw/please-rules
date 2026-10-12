@@ -1,0 +1,20 @@
+[Please]
+Version = >=17.0.0
+
+; Define the Plugin configuration options.
+[PluginDefinition]
+Name = opa
+Description = "A Please plugin for building, evaluating and testing Open Policy Agent policies."
+BuildDefsDir = "build_defs"
+
+[PluginConfig "tool"]
+ConfigKey = Tool
+DefaultValue = "//third_party/opa:opa"
+Inherit = true
+Help = "The opa executable, as a Please target or a command on the host's PATH. Leaving this as the default and setting ToolVersion downloads that version of OPA from GitHub Releases."
+
+[PluginConfig "tool_version"]
+ConfigKey = ToolVersion
+DefaultValue = "1.20.2"
+Inherit = true
+Help = "The OPA version to download when Tool is left as its default. See https://github.com/open-policy-agent/opa/releases for available versions."

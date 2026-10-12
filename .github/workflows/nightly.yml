@@ -1,0 +1,126 @@
+name: Nightly
+
+# Refreshes every plugin's checksum mirrors (its generated
+# `build_defs/*versions.build_defs` - see .github/scripts/mirrors/ and each
+# plugin's README's Checksum mirror section), so newly released tool versions
+# work without explicit hashes.
+#
+# Each plugin with changes gets its own pull request, `chore(<plugin>):
+# update version mirrors`, on a `nightly/<plugin>-version-mirrors` branch -
+# including the patch version bump and registry/ entry that title implies
+# (see .github/scripts/registry.nu), so it's released as soon as it merges.
+# The next night's run updates that same pull request (or closes it, if the
+# changes have landed some other way), rather than opening another one.
+#
+# Pull requests opened with the default GITHUB_TOKEN don't trigger other
+# workflows, so CI (ci.yml, registry.yml) wouldn't run on them. To have it
+# run, create a GitHub App with Contents and Pull requests read/write access,
+# install it on this repository, and set its ID as the NIGHTLY_APP_ID
+# repository variable and its private key as the NIGHTLY_APP_PRIVATE_KEY
+# repository secret - this then opens the pull requests as that App instead.
+# Without it, this still works (as long as "Allow GitHub Actions to create
+# and approve pull requests" is enabled in the repository's Actions
+# settings), but CI only runs once someone else pushes to the pull request.
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  update:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - plugin: nushell
+            mirrors: nushell
+          - plugin: plantuml
+            mirrors: plantuml
+          - plugin: opa
+            mirrors: opa
+          - plugin: hugo
+            mirrors: hugo
+          - plugin: k8s
+            mirrors: kustomize helm kubectl
+          - plugin: terraform
+            mirrors: terraform
+    runs-on: ubuntu-latest
+    # The mirrors only look up releases published since the last refresh, so
+    # this is normally quick - but one that has to verify a lot of new
+    # releases at once can take a while.
+    timeout-minutes: 60
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history, so registry.nu can find where the change diverged
+          # from main.
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-please
+
+      # The kubectl mirror verifies new releases' sigstore signatures.
+      - uses: sigstore/cosign-installer@v3
+        if: matrix.plugin == 'k8s'
+
+      - name: Run ${{ matrix.plugin }}'s mirror scripts
+        working-directory: .github
+        env:
+          # Read-only use of the GitHub API (listing releases) - without it,
+          # requests are rate limited to 60 an hour, shared by every job on
+          # the runner's IP.
+          GITHUB_TOKEN: ${{ github.token }}
+          MIRRORS: ${{ matrix.mirrors }}
+        run: |
+          set -euo pipefail
+          for mirror in $MIRRORS; do
+            echo "::group::${mirror}"
+            plz run "//scripts/mirrors:${mirror}"
+            echo "::endgroup::"
+          done
+
+      - name: Bump ${{ matrix.plugin }}'s version and registry entry, if its mirrors changed
+        id: bump
+        env:
+          PLUGIN: ${{ matrix.plugin }}
+          TITLE: "chore(${{ matrix.plugin }}): update version mirrors"
+        run: |
+          set -euo pipefail
+          git add -- "$PLUGIN"
+          if git diff --cached --quiet -- "$PLUGIN"; then
+            echo "${PLUGIN}: mirrors are up to date"
+          else
+            git diff --cached --stat -- "$PLUGIN"
+            (cd .github && plz run //scripts:registry -- bump --title "$TITLE" --base origin/main)
+          fi
+          echo "title=${TITLE}" >>"$GITHUB_OUTPUT"
+
+      - name: Get a GitHub App token, if one's configured
+        id: app-token
+        if: vars.NIGHTLY_APP_ID != ''
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.NIGHTLY_APP_ID }}
+          private-key: ${{ secrets.NIGHTLY_APP_PRIVATE_KEY }}
+
+      # Opens (or updates) the pull request with whatever's changed - or, if
+      # nothing has, deletes the branch, closing any pull request from a
+      # previous night that's no longer needed.
+      - name: Open or update ${{ matrix.plugin }}'s pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ steps.app-token.outputs.token || github.token }}
+          branch: nightly/${{ matrix.plugin }}-version-mirrors
+          delete-branch: true
+          base: main
+          title: ${{ steps.bump.outputs.title }}
+          commit-message: ${{ steps.bump.outputs.title }}
+          body: |
+            Newly published `${{ matrix.plugin }}` tool versions, from its
+            checksum mirror scripts (`cd .github && plz run
+            //scripts/mirrors:<tool>`), with the patch version bump and
+            `registry/` entry this title implies.
+
+            Opened by the [Nightly workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) - the next run updates this pull request.
+          labels: dependencies
