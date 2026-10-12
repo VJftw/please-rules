@@ -22,3 +22,11 @@ runs:
         ln -sf "$dir/please" "$HOME/.please/bin/plz"
         echo "$HOME/.please/bin" >>"$GITHUB_PATH"
         "$HOME/.please/bin/plz" --version
+
+    # Ubuntu 24.04 runners restrict unprivileged user namespaces, which
+    # Please's test sandbox (`sandbox = True`) needs to unshare the network
+    # and mount namespaces - without this it fails to start the test command.
+    - name: Allow unprivileged user namespaces
+      shell: bash
+      run: |
+        sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
