@@ -5,12 +5,14 @@ name: Nightly
 # plugin's README's Checksum mirror section), so newly released tool versions
 # work without explicit hashes.
 #
-# Each plugin with changes gets its own pull request, `chore(<plugin>):
-# update version mirrors`, on a `nightly/<plugin>-version-mirrors` branch -
-# including the patch version bump and registry/ entry that title implies
-# (see .github/scripts/registry.nu), so it's released as soon as it merges.
-# The next night's run updates that same pull request (or closes it, if the
-# changes have landed some other way), rather than opening another one.
+# Every plugin's mirrors are refreshed in parallel (one `update` job each),
+# then all of their changes go into a single pull request, `chore: update
+# version mirrors`, on the `nightly/version-mirrors` branch - including the
+# patch version bump and registry/ entry that title implies for each changed
+# plugin (see .github/scripts/registry.nu), so they're released as soon as it
+# merges. The next night's run updates that same pull request (or closes it,
+# if the changes have landed some other way), rather than opening another
+# one.
 #
 # Pull requests opened with the default GITHUB_TOKEN don't trigger other
 # workflows, so CI (ci.yml, registry.yml) wouldn't run on them. To have it
@@ -50,14 +52,9 @@ jobs:
     # releases at once can take a while.
     timeout-minutes: 60
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
-        with:
-          # Full history, so registry.nu can find where the change diverged
-          # from main.
-          fetch-depth: 0
       - uses: ./.github/actions/setup-please
 
       # The kubectl mirror verifies new releases' sigstore signatures.
@@ -80,11 +77,12 @@ jobs:
             echo "::endgroup::"
           done
 
-      - name: Bump ${{ matrix.plugin }}'s version and registry entry, if its mirrors changed
-        id: bump
+      # Handed to the pull-request job below as a patch - only if there's
+      # anything in it.
+      - name: Save ${{ matrix.plugin }}'s changes
+        id: diff
         env:
           PLUGIN: ${{ matrix.plugin }}
-          TITLE: "chore(${{ matrix.plugin }}): update version mirrors"
         run: |
           set -euo pipefail
           git add -- "$PLUGIN"
@@ -92,9 +90,65 @@ jobs:
             echo "${PLUGIN}: mirrors are up to date"
           else
             git diff --cached --stat -- "$PLUGIN"
+            git diff --cached --binary -- "$PLUGIN" >"$RUNNER_TEMP/${PLUGIN}.patch"
+            echo "changed=true" >>"$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: steps.diff.outputs.changed == 'true'
+        with:
+          name: mirrors-${{ matrix.plugin }}
+          path: ${{ runner.temp }}/${{ matrix.plugin }}.patch
+          retention-days: 1
+
+  pull-request:
+    needs: update
+    # Still opens a pull request with every other plugin's changes if one
+    # plugin's mirrors failed - that one's are picked up again the next night.
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history, so registry.nu can find where the change diverged
+          # from main.
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-please
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mirrors-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/patches
+
+      - name: Bump every changed plugin's version and registry entry
+        id: bump
+        env:
+          TITLE: "chore: update version mirrors"
+          PATCHES: ${{ runner.temp }}/patches
+        run: |
+          set -euo pipefail
+          for patch in "$PATCHES"/*.patch; do
+            [ -e "$patch" ] || continue
+            git apply --index "$patch"
+          done
+          plugins=""
+          if git diff --cached --quiet; then
+            echo "All mirrors are up to date"
+          else
+            git diff --cached --stat
+            plugins=$(git diff --cached --name-only | cut -d/ -f1 | sort -u | sed 's/.*/- `&`/')
             (cd .github && plz run //scripts:registry -- bump --title "$TITLE" --base origin/main)
           fi
           echo "title=${TITLE}" >>"$GITHUB_OUTPUT"
+          {
+            echo "plugins<<EOF"
+            echo "$plugins"
+            echo "EOF"
+          } >>"$GITHUB_OUTPUT"
 
       - name: Get a GitHub App token, if one's configured
         id: app-token
@@ -107,20 +161,23 @@ jobs:
       # Opens (or updates) the pull request with whatever's changed - or, if
       # nothing has, deletes the branch, closing any pull request from a
       # previous night that's no longer needed.
-      - name: Open or update ${{ matrix.plugin }}'s pull request
+      - name: Open or update the pull request
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ steps.app-token.outputs.token || github.token }}
-          branch: nightly/${{ matrix.plugin }}-version-mirrors
+          branch: nightly/version-mirrors
           delete-branch: true
           base: main
           title: ${{ steps.bump.outputs.title }}
           commit-message: ${{ steps.bump.outputs.title }}
           body: |
-            Newly published `${{ matrix.plugin }}` tool versions, from its
-            checksum mirror scripts (`cd .github && plz run
-            //scripts/mirrors:<tool>`), with the patch version bump and
-            `registry/` entry this title implies.
+            Newly published tool versions, from the checksum mirror scripts
+            (`cd .github && plz run //scripts/mirrors:<tool>`), for:
+
+            ${{ steps.bump.outputs.plugins }}
+
+            with the patch version bump and `registry/` entry this title
+            implies for each.
 
             Opened by the [Nightly workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) - the next run updates this pull request.
           labels: dependencies
