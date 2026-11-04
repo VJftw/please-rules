@@ -116,7 +116,11 @@ def hugo_site(name:str, config:str, srcs:list, base_url:str="", environment:str=
               or the legacy config.* name) - its directory becomes the site's
               `--source` root.
       srcs: Every other file the site needs - content/, layouts/, static/,
-            assets/, data/, i18n/, archetypes/, etc.
+            assets/, data/, i18n/, archetypes/, etc. Each is placed at its
+            path relative to the repository root, so another rule's output
+            (e.g. a rendered diagram, or a downloaded library extracted into
+            a directory) goes wherever that rule's package and `out` put it -
+            a directory's whole contents included.
       base_url: Passed via `--baseURL`.
       environment: Passed via `--environment` - set explicitly so a build's
                    output doesn't depend on an ambient HUGO_ENVIRONMENT.
@@ -146,7 +150,9 @@ def hugo_site(name:str, config:str, srcs:list, base_url:str="", environment:str=
         cmd = " && ".join([
             # Real copies (cp -L), not whatever Please staged the sources as.
             'mkdir -p "$TMP_DIR/_site"',
-            'for f in $SRCS; do mkdir -p "$TMP_DIR/_site/$(dirname "$f")" && cp -L "$f" "$TMP_DIR/_site/$f"; done',
+            # A directory (e.g. another rule's directory output) is copied
+            # with its whole contents, at the same path.
+            'for f in $SRCS; do if [ -d "$f" ]; then mkdir -p "$TMP_DIR/_site/$f" && cp -RL "$f/." "$TMP_DIR/_site/$f/"; else mkdir -p "$TMP_DIR/_site/$(dirname "$f")" && cp -L "$f" "$TMP_DIR/_site/$f"; fi; done',
             'mkdir -p "$OUT"',
             " ".join([
                 '"$TOOL"',

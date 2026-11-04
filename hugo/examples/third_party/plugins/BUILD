@@ -5,3 +5,10 @@ subrepo(
     path = "..",
     plugin = True,
 )
+
+# The plantuml plugin, for the slides example - also from this checkout.
+subrepo(
+    name = "plantuml",
+    path = "../../plantuml",
+    plugin = True,
+)
