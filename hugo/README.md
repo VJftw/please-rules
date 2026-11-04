@@ -53,6 +53,46 @@ $ cd site && plz run //site:public_hugo -- server
   It also defines **`<name>_hugo`**, which runs the plugin's `hugo` from wherever `plz run` is invoked - e.g. `hugo server` for a live-reloading preview, or any other one-off subcommand.
 - **`hugo_tool`**: downloads Hugo for the host platform (Linux amd64/arm64, and macOS's universal `.pkg`, unpacked with `pkgutil`). Used for the default `Tool`, and can be used directly to provide your own - a different `version`/`variant`, your own `hashes`, or a `url_template` (with `{version}` and `{asset}` placeholders) for a mirror.
 
+## Generated files and directories
+
+`srcs` can include other rules' outputs, not just source files. Each one is
+placed at its path relative to the repository root, the same as a source
+file, and a directory output is copied with everything in it. For example,
+a rendered diagram goes wherever its rule writes it, and a downloaded library
+can be extracted into a directory under `static/`:
+
+```python
+# reveal.js's dist/ directory, from its npm package, at static/reveal/.
+remote_file(
+    name = "revealjs_package",
+    url = "https://registry.npmjs.org/reveal.js/-/reveal.js-6.0.2.tgz",
+    hashes = ["sha256: ..."],
+)
+
+genrule(
+    name = "revealjs",
+    srcs = [":revealjs_package"],
+    outs = ["static/reveal"],
+    cmd = 'mkdir "$TMP_DIR/x" && tar -xzf "$SRC" -C "$TMP_DIR/x" package/dist && mv "$TMP_DIR/x/package/dist" "$OUT"',
+)
+
+hugo_site(
+    name = "public",
+    config = "hugo.toml",
+    srcs = glob(["content/**", "layouts/**"]) + [
+        ":revealjs",
+        "//slides/diagrams",  # plantuml_diagram outputs
+    ],
+)
+```
+
+An output that isn't already in one of Hugo's own directories can be served
+from anywhere with a [module mount](https://gohugo.io/configuration/module/#mounts)
+in `hugo.toml`.
+`examples/slides/` is a complete example: reveal.js slide decks written in
+Markdown (each `---` starts a new slide), with [plantuml](../plantuml)
+diagrams.
+
 ## Configuration
 
 | Key           | Default                   | Description |
@@ -65,7 +105,9 @@ The `extended` build's checksums for every Hugo release are in the plugin's mirr
 
 ## Testing
 
-[`examples/`](./examples) is a separate Please repository that consumes this plugin from this checkout via `subrepo(name = "hugo", path = "..", plugin = True)`. It renders a small site and checks its pages:
+[`examples/`](./examples) is a separate Please repository that consumes this plugin from this checkout via `subrepo(name = "hugo", path = "..", plugin = True)`. `site/` renders a small site and checks its pages. `slides/` is a site
+of reveal.js decks with PlantUML diagrams (see above), loading the plantuml
+plugin from this checkout too:
 
 ```console
 $ cd examples && plz test //...

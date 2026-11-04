@@ -6,3 +6,7 @@ Version = >=17.0.0
 
 [Plugin "hugo"]
 Target = //third_party/plugins:hugo
+
+; For the slides example's diagrams.
+[Plugin "plantuml"]
+Target = //third_party/plugins:plantuml

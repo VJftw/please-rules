@@ -65,7 +65,10 @@ The default `Java` is a Temurin 25 JDK, available for Linux and macOS on amd64 a
 
 ### The java plugin
 
-This plugin uses the java plugin internally, defined as `//:java` in this plugin. When this plugin is loaded as a subrepo, Please resolves `///java` via your repository's `[Plugin "java"]` config if it has one, so if you already use the java plugin, yours is used instead. You don't need to configure it otherwise.
+This plugin uses the java plugin internally, defined as `//:java` in this plugin. When this plugin is loaded as a subrepo, Please resolves `///java` via your repository's `[Plugin "java"]` config if it has one, so if you already use the java plugin, yours is used instead. You don't need to configure it otherwise, but if you don't, your repository needs a
+`BUILD` file at its root (even an empty one): Please looks for the fallback via your
+repository's root package. Without one, the plantuml rules fail to load - and Please 17.34
+can still report the build as successful, without having built anything.
 
 ## Testing
 
